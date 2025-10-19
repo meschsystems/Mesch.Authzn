@@ -9,13 +9,13 @@ public class ScopeMatchingTests
     {
         var auth = AuthorizationBuilder.Create()
             .AddRole("role:tenant-admin", r =>
-                r.Grant("invoice.read", new ScopeBag { ["tenant"] = "acme" }))
+                r.Grant("invoice:read", new ScopeBag { ["tenant"] = "acme" }))
             .Assign("user:99", "role:tenant-admin")
             .Build();
 
         var decision = await auth.Engine
             .For("user:99")
-            .On("invoice.read")
+            .On("invoice:read")
             .InScope(new ScopeBag { ["tenant"] = "acme" })
             .EvaluateAsync();
 
@@ -27,13 +27,13 @@ public class ScopeMatchingTests
     {
         var auth = AuthorizationBuilder.Create()
             .AddRole("role:tenant-admin", r =>
-                r.Grant("invoice.read", new ScopeBag { ["tenant"] = "acme" }))
+                r.Grant("invoice:read", new ScopeBag { ["tenant"] = "acme" }))
             .Assign("user:99", "role:tenant-admin")
             .Build();
 
         var decision = await auth.Engine
             .For("user:99")
-            .On("invoice.read")
+            .On("invoice:read")
             .InScope(new ScopeBag { ["tenant"] = "other" })
             .EvaluateAsync();
 
@@ -46,13 +46,13 @@ public class ScopeMatchingTests
     {
         var auth = AuthorizationBuilder.Create()
             .AddRole("role:tenant-admin", r =>
-                r.Grant("invoice.read", new ScopeBag { ["tenant"] = "acme" }))
+                r.Grant("invoice:read", new ScopeBag { ["tenant"] = "acme" }))
             .Assign("user:99", "role:tenant-admin")
             .Build();
 
         var decision = await auth.Engine
             .For("user:99")
-            .On("invoice.read")
+            .On("invoice:read")
             .InScope(new ScopeBag
             {
                 ["tenant"] = "acme",
@@ -68,7 +68,7 @@ public class ScopeMatchingTests
     {
         var auth = AuthorizationBuilder.Create()
             .AddRole("role:admin", r =>
-                r.Grant("invoice.read", new ScopeBag
+                r.Grant("invoice:read", new ScopeBag
                 {
                     ["tenant"] = "acme",
                     ["project"] = "alpha"
@@ -78,7 +78,7 @@ public class ScopeMatchingTests
 
         var decision = await auth.Engine
             .For("user:99")
-            .On("invoice.read")
+            .On("invoice:read")
             .InScope(new ScopeBag { ["tenant"] = "acme" })
             .EvaluateAsync();
 
@@ -90,13 +90,13 @@ public class ScopeMatchingTests
     public async Task ScopeMatching_AllowsAccess_WhenNoScopeConstraints()
     {
         var auth = AuthorizationBuilder.Create()
-            .AddRole("role:admin", r => r.Grant("invoice.read"))
+            .AddRole("role:admin", r => r.Grant("invoice:read"))
             .Assign("user:1", "role:admin")
             .Build();
 
         var decision = await auth.Engine
             .For("user:1")
-            .On("invoice.read")
+            .On("invoice:read")
             .InScope(new ScopeBag { ["tenant"] = "acme" })
             .EvaluateAsync();
 

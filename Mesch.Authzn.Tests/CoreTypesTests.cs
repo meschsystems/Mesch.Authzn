@@ -25,10 +25,10 @@ public class CoreTypesTests
     [Fact]
     public void PermissionId_ImplicitConversion_FromString()
     {
-        PermissionId permissionId = "invoice.read";
+        PermissionId permissionId = "invoice:read";
 
-        Assert.Equal("invoice.read", permissionId.Value);
-        Assert.Equal("invoice.read", permissionId.ToString());
+        Assert.Equal("invoice:read", permissionId.Value);
+        Assert.Equal("invoice:read", permissionId.ToString());
     }
 
     [Fact]

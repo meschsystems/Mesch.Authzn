@@ -9,8 +9,8 @@ public class RoleTests
     {
         var grants = new List<PermissionGrant>
         {
-            new PermissionGrant("invoice.read"),
-            new PermissionGrant("invoice.write")
+            new PermissionGrant("invoice:read"),
+            new PermissionGrant("invoice:write")
         };
         var role = new Role("role:admin", "Administrator", grants);
 
@@ -22,7 +22,7 @@ public class RoleTests
     [Fact]
     public void PermissionGrant_UsesEmptyScope_WhenNoneProvided()
     {
-        var grant = new PermissionGrant("invoice.read");
+        var grant = new PermissionGrant("invoice:read");
 
         Assert.NotNull(grant.Scope);
         Assert.Empty(grant.Scope);
@@ -33,7 +33,7 @@ public class RoleTests
     public void PermissionGrant_CanHaveScope()
     {
         var scope = new ScopeBag { ["tenant"] = "acme" };
-        var grant = new PermissionGrant("invoice.read", scope);
+        var grant = new PermissionGrant("invoice:read", scope);
 
         Assert.Single(grant.Scope);
         Assert.Equal("acme", grant.Scope["tenant"]);
@@ -43,7 +43,7 @@ public class RoleTests
     public void PermissionGrant_CanHaveCondition()
     {
         var grant = new PermissionGrant(
-            "invoice.approve",
+            "invoice:approve",
             condition: attrs => (string)attrs["department"] == "finance");
 
         Assert.NotNull(grant.Condition);

@@ -26,7 +26,21 @@ A reusable definition of authority. Roles contain permission grants and are stab
 
 ### Permission
 
-A named action such as `invoice.read` or `project.delete`. Permissions support wildcard notation with the `.*` suffix (e.g., `invoice.*` matches `invoice.read`, `invoice.write`, etc.).
+A permission consists of a **resource** and an **action**, expressed as `resource:action`. The library supports both simple and hierarchical resources:
+
+- Simple: `documents:read`, `invoices:write`, `users:delete`
+- Hierarchical: `project:task:read`, `api:v1:endpoints:create`
+
+The rightmost segment after the final colon is the action; everything before it is the resource.
+
+Wildcard actions are supported using `*`:
+- `documents:*` - All actions on documents
+- `project:task:*` - All actions on project tasks
+- `*:*` (or just `*`) - All actions on all resources
+
+Reading permissions right-to-left provides natural semantics:
+- `project:task:read` - "For project, when dealing with task, may read"
+- `api:v1:user:update` - "For api, in v1, when dealing with user, may update"
 
 ### Scope
 
@@ -70,13 +84,13 @@ The `DenyReason` enumeration provides diagnostic information:
 
 ```csharp
 var auth = AuthorizationBuilder.Create()
-    .AddRole("role:reader", r => r.Grant("invoice.read"))
+    .AddRole("role:reader", r => r.Grant("invoice:read"))
     .Assign("user:42", "role:reader")
     .Build();
 
 var decision = await auth.Engine
     .For("user:42")
-    .On("invoice.read")
+    .On("invoice:read")
     .EvaluateAsync();
 
 if (decision.IsAllowed)
@@ -89,14 +103,14 @@ if (decision.IsAllowed)
 
 ```csharp
 var auth = AuthorizationBuilder.Create()
-    .AddRole("role:admin", r => r.Grant("invoice.*"))
+    .AddRole("role:admin", r => r.Grant("invoice:*"))
     .Assign("user:1", "role:admin")
     .Build();
 
-// Matches invoice.read, invoice.write, invoice.delete, etc.
+// Matches invoice:read, invoice:write, invoice:delete, etc.
 var decision = await auth.Engine
     .For("user:1")
-    .On("invoice.delete")
+    .On("invoice:delete")
     .EvaluateAsync();
 ```
 
@@ -105,33 +119,87 @@ var decision = await auth.Engine
 ```csharp
 var auth = AuthorizationBuilder.Create()
     .AddRole("role:tenant-admin", r =>
-        r.Grant("invoice.*", new ScopeBag { ["tenant"] = "acme" }))
+        r.Grant("invoice:*", new ScopeBag { ["tenant"] = "acme" }))
     .Assign("user:99", "role:tenant-admin")
     .Build();
 
 // Allowed - scope matches
 var decision1 = await auth.Engine
     .For("user:99")
-    .On("invoice.read")
+    .On("invoice:read")
     .InScope(new ScopeBag { ["tenant"] = "acme" })
     .EvaluateAsync();
 
 // Denied - scope mismatch
 var decision2 = await auth.Engine
     .For("user:99")
-    .On("invoice.read")
+    .On("invoice:read")
     .InScope(new ScopeBag { ["tenant"] = "other" })
     .EvaluateAsync();
 ```
 
-### Hierarchical Scopes
+### Hierarchical Resources
+
+Resources can be hierarchical using multiple colon-separated segments:
+
+```csharp
+var auth = AuthorizationBuilder.Create()
+    .AddRole("role:project-lead", r =>
+        r.Grant("project:task:*", new ScopeBag
+        {
+            ["tenant"] = "acme",
+            ["project"] = "alpha"
+        }))
+    .AddRole("role:developer", r =>
+    {
+        r.Grant("project:task:read", new ScopeBag
+        {
+            ["tenant"] = "acme",
+            ["project"] = "alpha"
+        });
+        r.Grant("project:task:update", new ScopeBag
+        {
+            ["tenant"] = "acme",
+            ["project"] = "alpha"
+        });
+    })
+    .Assign("user:lead", "role:project-lead")
+    .Assign("user:dev", "role:developer")
+    .Build();
+
+// Project lead can delete tasks (via wildcard)
+var decision1 = await auth.Engine
+    .For("user:lead")
+    .On("project:task:delete")
+    .InScope(new ScopeBag
+    {
+        ["tenant"] = "acme",
+        ["project"] = "alpha"
+    })
+    .EvaluateAsync();
+// Result: Allowed
+
+// Developer cannot delete tasks (only read and update)
+var decision2 = await auth.Engine
+    .For("user:dev")
+    .On("project:task:delete")
+    .InScope(new ScopeBag
+    {
+        ["tenant"] = "acme",
+        ["project"] = "alpha"
+    })
+    .EvaluateAsync();
+// Result: Denied
+```
+
+### Scope Hierarchies
 
 Granted scopes apply to equal or more specific requested scopes:
 
 ```csharp
 var auth = AuthorizationBuilder.Create()
     .AddRole("role:project-admin", r =>
-        r.Grant("task.manage", new ScopeBag
+        r.Grant("task:manage", new ScopeBag
         {
             ["tenant"] = "acme",
             ["project"] = "alpha"
@@ -142,7 +210,7 @@ var auth = AuthorizationBuilder.Create()
 // Allowed - more specific scope
 var decision = await auth.Engine
     .For("user:200")
-    .On("task.manage")
+    .On("task:manage")
     .InScope(new ScopeBag
     {
         ["tenant"] = "acme",
@@ -160,7 +228,7 @@ Permission grants can include runtime conditions:
 var auth = AuthorizationBuilder.Create()
     .AddRole("role:approver", r =>
         r.Grant(
-            "invoice.approve",
+            "invoice:approve",
             new ScopeBag { ["tenant"] = "acme" },
             attrs =>
             {
@@ -173,7 +241,7 @@ var auth = AuthorizationBuilder.Create()
 
 var decision = await auth.Engine
     .For("user:77")
-    .On("invoice.approve")
+    .On("invoice:approve")
     .InScope(new ScopeBag { ["tenant"] = "acme" })
     .WithAttributes(new AttributeBag
     {
@@ -190,7 +258,7 @@ var startDate = DateTimeOffset.UtcNow;
 var endDate = startDate.AddDays(30);
 
 var auth = AuthorizationBuilder.Create()
-    .AddRole("role:contractor", r => r.Grant("project.read"))
+    .AddRole("role:contractor", r => r.Grant("project:read"))
     .Assign("user:50", "role:contractor", notBefore: startDate, notAfter: endDate)
     .Build();
 ```
@@ -199,7 +267,7 @@ var auth = AuthorizationBuilder.Create()
 
 ```csharp
 var auth = AuthorizationBuilder.Create()
-    .AddRole("role:editor", r => r.Grant("document.edit"))
+    .AddRole("role:editor", r => r.Grant("document:edit"))
     .Assign("user:25", "role:editor")
     .Build();
 
@@ -215,8 +283,8 @@ auth.Revoke("user:25", "role:editor");
 services.AddAuthorizationEngine(builder =>
 {
     builder
-        .AddRole("role:admin", r => r.Grant("system.*"))
-        .AddRole("role:reader", r => r.Grant("system.read"))
+        .AddRole("role:admin", r => r.Grant("system:*"))
+        .AddRole("role:reader", r => r.Grant("system:read"))
         .Assign("user:1", "role:admin");
 });
 ```
@@ -237,7 +305,7 @@ public class InvoiceService
     {
         var decision = await _authEngine
             .For(principalId)
-            .On("invoice.read")
+            .On("invoice:read")
             .InScope(new ScopeBag { ["tenant"] = GetTenantForInvoice(invoiceId) })
             .EvaluateAsync();
 
@@ -353,8 +421,8 @@ var host = AuthorizationBuilder.Create().Build();
 // Add role at runtime
 var newRole = new Role("role:analyst", "Data Analyst", new List<PermissionGrant>
 {
-    new PermissionGrant("report.read"),
-    new PermissionGrant("report.export")
+    new PermissionGrant("report:read"),
+    new PermissionGrant("report:export")
 });
 host.AddRole(newRole);
 
@@ -384,25 +452,48 @@ These methods only work with `InMemoryRoleStore` and `InMemoryAssignmentStore`. 
 
 ### Permission Matching
 
+Permissions are matched by comparing resource and action components separately.
+
 Exact match:
 ```
-Granted: "invoice.read"
-Requested: "invoice.read"
-Result: Match
+Granted: "invoice:read"
+Requested: "invoice:read"
+Result: Match (resource="invoice" matches, action="read" matches)
 ```
 
-Wildcard match:
+Wildcard action:
 ```
-Granted: "invoice.*"
-Requested: "invoice.read"
-Result: Match
+Granted: "invoice:*"
+Requested: "invoice:read"
+Result: Match (resource="invoice" matches, action="*" matches anything)
 ```
 
-No match:
+Wildcard resource and action:
 ```
-Granted: "invoice.*"
-Requested: "project.read"
-Result: No match
+Granted: "*" (equivalent to "*:*")
+Requested: "invoice:read"
+Result: Match (both wildcards match anything)
+```
+
+Hierarchical resource match:
+```
+Granted: "project:task:*"
+Requested: "project:task:delete"
+Result: Match (resource="project:task" matches, action="*" matches "delete")
+```
+
+No match - different resources:
+```
+Granted: "invoice:*"
+Requested: "project:read"
+Result: No match (resource "invoice" != "project")
+```
+
+No match - different actions:
+```
+Granted: "invoice:read"
+Requested: "invoice:delete"
+Result: No match (action "read" != "delete")
 ```
 
 ### Scope Matching

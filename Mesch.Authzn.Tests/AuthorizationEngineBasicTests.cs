@@ -8,13 +8,13 @@ public class AuthorizationEngineBasicTests
     public async Task AuthorizationEngine_AllowsAccess_WhenPermissionGranted()
     {
         var auth = AuthorizationBuilder.Create()
-            .AddRole("role:reader", r => r.Grant("invoice.read"))
+            .AddRole("role:reader", r => r.Grant("invoice:read"))
             .Assign("user:42", "role:reader")
             .Build();
 
         var decision = await auth.Engine
             .For("user:42")
-            .On("invoice.read")
+            .On("invoice:read")
             .EvaluateAsync();
 
         Assert.True(decision.IsAllowed);
@@ -26,12 +26,12 @@ public class AuthorizationEngineBasicTests
     public async Task AuthorizationEngine_DeniesAccess_WhenNoAssignments()
     {
         var auth = AuthorizationBuilder.Create()
-            .AddRole("role:reader", r => r.Grant("invoice.read"))
+            .AddRole("role:reader", r => r.Grant("invoice:read"))
             .Build();
 
         var decision = await auth.Engine
             .For("user:42")
-            .On("invoice.read")
+            .On("invoice:read")
             .EvaluateAsync();
 
         Assert.False(decision.IsAllowed);
@@ -42,13 +42,13 @@ public class AuthorizationEngineBasicTests
     public async Task AuthorizationEngine_DeniesAccess_WhenNoMatchingPermission()
     {
         var auth = AuthorizationBuilder.Create()
-            .AddRole("role:reader", r => r.Grant("invoice.read"))
+            .AddRole("role:reader", r => r.Grant("invoice:read"))
             .Assign("user:42", "role:reader")
             .Build();
 
         var decision = await auth.Engine
             .For("user:42")
-            .On("invoice.delete")
+            .On("invoice:delete")
             .EvaluateAsync();
 
         Assert.False(decision.IsAllowed);
@@ -59,7 +59,7 @@ public class AuthorizationEngineBasicTests
     public async Task AuthorizationEngine_DeniesAccess_WhenAssignmentRevoked()
     {
         var auth = AuthorizationBuilder.Create()
-            .AddRole("role:reader", r => r.Grant("invoice.read"))
+            .AddRole("role:reader", r => r.Grant("invoice:read"))
             .Assign("user:42", "role:reader")
             .Build();
 
@@ -67,7 +67,7 @@ public class AuthorizationEngineBasicTests
 
         var decision = await auth.Engine
             .For("user:42")
-            .On("invoice.read")
+            .On("invoice:read")
             .EvaluateAsync();
 
         Assert.False(decision.IsAllowed);
@@ -79,13 +79,13 @@ public class AuthorizationEngineBasicTests
     {
         var tomorrow = DateTimeOffset.UtcNow.AddDays(1);
         var auth = AuthorizationBuilder.Create()
-            .AddRole("role:reader", r => r.Grant("invoice.read"))
+            .AddRole("role:reader", r => r.Grant("invoice:read"))
             .Assign("user:42", "role:reader", notBefore: tomorrow)
             .Build();
 
         var decision = await auth.Engine
             .For("user:42")
-            .On("invoice.read")
+            .On("invoice:read")
             .EvaluateAsync();
 
         Assert.False(decision.IsAllowed);
@@ -97,13 +97,13 @@ public class AuthorizationEngineBasicTests
     {
         var yesterday = DateTimeOffset.UtcNow.AddDays(-1);
         var auth = AuthorizationBuilder.Create()
-            .AddRole("role:reader", r => r.Grant("invoice.read"))
+            .AddRole("role:reader", r => r.Grant("invoice:read"))
             .Assign("user:42", "role:reader", notAfter: yesterday)
             .Build();
 
         var decision = await auth.Engine
             .For("user:42")
-            .On("invoice.read")
+            .On("invoice:read")
             .EvaluateAsync();
 
         Assert.False(decision.IsAllowed);
@@ -114,7 +114,7 @@ public class AuthorizationEngineBasicTests
     public async Task AuthorizationEngine_ThrowsException_WhenPermissionNotSpecified()
     {
         var auth = AuthorizationBuilder.Create()
-            .AddRole("role:reader", r => r.Grant("invoice.read"))
+            .AddRole("role:reader", r => r.Grant("invoice:read"))
             .Assign("user:42", "role:reader")
             .Build();
 

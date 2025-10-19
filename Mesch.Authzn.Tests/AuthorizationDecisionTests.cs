@@ -7,12 +7,12 @@ public class AuthorizationDecisionTests
     [Fact]
     public void AuthorizationDecision_Allow_CreatesAllowedDecision()
     {
-        var decision = AuthorizationDecision.Allow("role:admin", "system.read");
+        var decision = AuthorizationDecision.Allow("role:admin", "system:read");
 
         Assert.True(decision.IsAllowed);
         Assert.Equal(DenyReason.None, decision.DenyReason);
         Assert.Equal("role:admin", decision.MatchedRole?.Value);
-        Assert.Equal("system.read", decision.MatchedPermission?.Value);
+        Assert.Equal("system:read", decision.MatchedPermission?.Value);
     }
 
     [Fact]

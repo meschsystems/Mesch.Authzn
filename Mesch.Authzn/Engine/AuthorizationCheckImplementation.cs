@@ -147,28 +147,23 @@ internal sealed class AuthorizationCheckImplementation : IAuthorizationCheck
 
     /// <summary>
     /// Determines whether a granted permission matches the requested permission.
-    /// Supports exact matching and wildcard matching with the '.*' suffix.
+    /// Supports exact matching and wildcard matching for both resource and action components.
+    /// Wildcard "*" matches any value for that component.
     /// </summary>
     /// <param name="grant">The permission granted by a role.</param>
     /// <param name="requested">The permission being requested.</param>
     /// <returns>True if the granted permission matches the requested permission; otherwise, false.</returns>
     private static bool PermissionMatches(PermissionId grant, PermissionId requested)
     {
-        var grantStr = grant.Value;
-        var requestedStr = requested.Value;
+        // Check resource component
+        var resourceMatches = grant.Resource == "*" ||
+                             grant.Resource == requested.Resource;
 
-        if (grantStr == requestedStr)
-        {
-            return true;
-        }
+        // Check action component
+        var actionMatches = grant.Action == "*" ||
+                           grant.Action == requested.Action;
 
-        if (grantStr.EndsWith(".*"))
-        {
-            var prefix = grantStr[..^1];
-            return requestedStr.StartsWith(prefix);
-        }
-
-        return false;
+        return resourceMatches && actionMatches;
     }
 
     /// <summary>

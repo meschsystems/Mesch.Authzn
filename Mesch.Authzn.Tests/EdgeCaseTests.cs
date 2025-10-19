@@ -14,7 +14,7 @@ public class EdgeCaseTests
 
         var decision = await auth.Engine
             .For("user:1")
-            .On("any.permission")
+            .On("any:permission")
             .EvaluateAsync();
 
         Assert.False(decision.IsAllowed);
@@ -34,7 +34,7 @@ public class EdgeCaseTests
 
         var decision = await host.Engine
             .For("user:1")
-            .On("any.permission")
+            .On("any:permission")
             .EvaluateAsync();
 
         Assert.False(decision.IsAllowed);
@@ -44,13 +44,13 @@ public class EdgeCaseTests
     public async Task EdgeCase_EmptyScope_MatchesAnyRequest()
     {
         var auth = AuthorizationBuilder.Create()
-            .AddRole("role:admin", r => r.Grant("system.read", new ScopeBag()))
+            .AddRole("role:admin", r => r.Grant("system:read", new ScopeBag()))
             .Assign("user:1", "role:admin")
             .Build();
 
         var decision = await auth.Engine
             .For("user:1")
-            .On("system.read")
+            .On("system:read")
             .InScope(new ScopeBag { ["tenant"] = "any" })
             .EvaluateAsync();
 
@@ -61,13 +61,13 @@ public class EdgeCaseTests
     public async Task EdgeCase_NoScopeInRequest_WorksWithEmptyGrantScope()
     {
         var auth = AuthorizationBuilder.Create()
-            .AddRole("role:admin", r => r.Grant("system.read"))
+            .AddRole("role:admin", r => r.Grant("system:read"))
             .Assign("user:1", "role:admin")
             .Build();
 
         var decision = await auth.Engine
             .For("user:1")
-            .On("system.read")
+            .On("system:read")
             .EvaluateAsync();
 
         Assert.True(decision.IsAllowed);
@@ -77,14 +77,14 @@ public class EdgeCaseTests
     public async Task EdgeCase_MultipleAssignments_SameRole_FirstWins()
     {
         var auth = AuthorizationBuilder.Create()
-            .AddRole("role:admin", r => r.Grant("system.read"))
+            .AddRole("role:admin", r => r.Grant("system:read"))
             .Assign("user:1", "role:admin")
             .Assign("user:1", "role:admin")
             .Build();
 
         var decision = await auth.Engine
             .For("user:1")
-            .On("system.read")
+            .On("system:read")
             .EvaluateAsync();
 
         Assert.True(decision.IsAllowed);
@@ -94,13 +94,13 @@ public class EdgeCaseTests
     public async Task EdgeCase_WildcardPermission_DoesNotMatchWithoutDot()
     {
         var auth = AuthorizationBuilder.Create()
-            .AddRole("role:admin", r => r.Grant("invoice.*"))
+            .AddRole("role:admin", r => r.Grant("invoice:*"))
             .Assign("user:1", "role:admin")
             .Build();
 
         var decision = await auth.Engine
             .For("user:1")
-            .On("invoices.read")
+            .On("invoices:read")
             .EvaluateAsync();
 
         Assert.False(decision.IsAllowed);

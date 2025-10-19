@@ -10,14 +10,14 @@ public class AbacTests
         var auth = AuthorizationBuilder.Create()
             .AddRole("role:approver", r =>
                 r.Grant(
-                    "invoice.approve",
+                    "invoice:approve",
                     condition: attrs => (string)attrs["department"] == "finance"))
             .Assign("user:77", "role:approver")
             .Build();
 
         var decision = await auth.Engine
             .For("user:77")
-            .On("invoice.approve")
+            .On("invoice:approve")
             .WithAttributes(new AttributeBag { ["department"] = "finance" })
             .EvaluateAsync();
 
@@ -30,14 +30,14 @@ public class AbacTests
         var auth = AuthorizationBuilder.Create()
             .AddRole("role:approver", r =>
                 r.Grant(
-                    "invoice.approve",
+                    "invoice:approve",
                     condition: attrs => (string)attrs["department"] == "finance"))
             .Assign("user:77", "role:approver")
             .Build();
 
         var decision = await auth.Engine
             .For("user:77")
-            .On("invoice.approve")
+            .On("invoice:approve")
             .WithAttributes(new AttributeBag { ["department"] = "sales" })
             .EvaluateAsync();
 
@@ -51,14 +51,14 @@ public class AbacTests
         var auth = AuthorizationBuilder.Create()
             .AddRole("role:approver", r =>
                 r.Grant(
-                    "invoice.approve",
+                    "invoice:approve",
                     condition: attrs => ((string)attrs["nonexistent"]).Length > 0))
             .Assign("user:77", "role:approver")
             .Build();
 
         var decision = await auth.Engine
             .For("user:77")
-            .On("invoice.approve")
+            .On("invoice:approve")
             .WithAttributes(new AttributeBag())
             .EvaluateAsync();
 
@@ -72,7 +72,7 @@ public class AbacTests
         var auth = AuthorizationBuilder.Create()
             .AddRole("role:manager", r =>
                 r.Grant(
-                    "budget.approve",
+                    "budget:approve",
                     condition: attrs =>
                     {
                         var amount = Convert.ToDecimal(attrs["amount"]);
@@ -84,7 +84,7 @@ public class AbacTests
 
         var decision1 = await auth.Engine
             .For("user:300")
-            .On("budget.approve")
+            .On("budget:approve")
             .WithAttributes(new AttributeBag
             {
                 ["amount"] = 50000m,
@@ -94,7 +94,7 @@ public class AbacTests
 
         var decision2 = await auth.Engine
             .For("user:300")
-            .On("budget.approve")
+            .On("budget:approve")
             .WithAttributes(new AttributeBag
             {
                 ["amount"] = 150000m,
@@ -112,7 +112,7 @@ public class AbacTests
         var auth = AuthorizationBuilder.Create()
             .AddRole("role:approver", r =>
                 r.Grant(
-                    "invoice.approve",
+                    "invoice:approve",
                     new ScopeBag { ["tenant"] = "acme" },
                     attrs => (string)attrs["department"] == "finance"))
             .Assign("user:77", "role:approver")
@@ -120,7 +120,7 @@ public class AbacTests
 
         var decision = await auth.Engine
             .For("user:77")
-            .On("invoice.approve")
+            .On("invoice:approve")
             .InScope(new ScopeBag { ["tenant"] = "acme" })
             .WithAttributes(new AttributeBag { ["department"] = "finance" })
             .EvaluateAsync();

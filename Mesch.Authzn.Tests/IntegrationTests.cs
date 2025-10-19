@@ -19,12 +19,12 @@ public class IntegrationTests
         var auth = AuthorizationBuilder.Create()
             .AddRole("role:tenant-admin", r =>
             {
-                r.Grant("invoice.*", new ScopeBag { ["tenant"] = "acme" });
-                r.Grant("user.*", new ScopeBag { ["tenant"] = "acme" });
+                r.Grant("invoice:*", new ScopeBag { ["tenant"] = "acme" });
+                r.Grant("user:*", new ScopeBag { ["tenant"] = "acme" });
             })
             .AddRole("role:global-viewer", r =>
             {
-                r.Grant("invoice.read");
+                r.Grant("invoice:read");
             })
             .Assign("user:admin", "role:tenant-admin")
             .Assign("user:viewer", "role:global-viewer")
@@ -33,7 +33,7 @@ public class IntegrationTests
         // Tenant admin can manage invoices in their tenant
         var decision1 = await auth.Engine
             .For("user:admin")
-            .On("invoice.create")
+            .On("invoice:create")
             .InScope(new ScopeBag { ["tenant"] = "acme" })
             .EvaluateAsync();
         Assert.True(decision1.IsAllowed);
@@ -42,7 +42,7 @@ public class IntegrationTests
         // Tenant admin cannot manage invoices in other tenants
         var decision2 = await auth.Engine
             .For("user:admin")
-            .On("invoice.create")
+            .On("invoice:create")
             .InScope(new ScopeBag { ["tenant"] = "other" })
             .EvaluateAsync();
         Assert.False(decision2.IsAllowed);
@@ -51,7 +51,7 @@ public class IntegrationTests
         // Global viewer can read invoices anywhere
         var decision3 = await auth.Engine
             .For("user:viewer")
-            .On("invoice.read")
+            .On("invoice:read")
             .InScope(new ScopeBag { ["tenant"] = "acme" })
             .EvaluateAsync();
         Assert.True(decision3.IsAllowed);
@@ -60,7 +60,7 @@ public class IntegrationTests
         // Global viewer cannot write
         var decision4 = await auth.Engine
             .For("user:viewer")
-            .On("invoice.write")
+            .On("invoice:write")
             .EvaluateAsync();
         Assert.False(decision4.IsAllowed);
         _output.WriteLine("Global viewer cannot write invoices");
@@ -73,7 +73,7 @@ public class IntegrationTests
             .AddRole("role:finance-manager", r =>
             {
                 r.Grant(
-                    "invoice.approve",
+                    "invoice:approve",
                     new ScopeBag { ["tenant"] = "acme" },
                     attrs =>
                     {
@@ -89,7 +89,7 @@ public class IntegrationTests
             .AddRole("role:senior-manager", r =>
             {
                 r.Grant(
-                    "invoice.approve",
+                    "invoice:approve",
                     new ScopeBag { ["tenant"] = "acme" },
                     attrs =>
                     {
@@ -108,7 +108,7 @@ public class IntegrationTests
         // Finance manager can approve small invoices
         var decision1 = await auth.Engine
             .For("user:manager")
-            .On("invoice.approve")
+            .On("invoice:approve")
             .InScope(new ScopeBag { ["tenant"] = "acme" })
             .WithAttributes(new AttributeBag
             {
@@ -122,7 +122,7 @@ public class IntegrationTests
         // Finance manager cannot approve large invoices
         var decision2 = await auth.Engine
             .For("user:manager")
-            .On("invoice.approve")
+            .On("invoice:approve")
             .InScope(new ScopeBag { ["tenant"] = "acme" })
             .WithAttributes(new AttributeBag
             {
@@ -136,7 +136,7 @@ public class IntegrationTests
         // Senior manager can approve large invoices
         var decision3 = await auth.Engine
             .For("user:senior")
-            .On("invoice.approve")
+            .On("invoice:approve")
             .InScope(new ScopeBag { ["tenant"] = "acme" })
             .WithAttributes(new AttributeBag
             {
@@ -155,14 +155,14 @@ public class IntegrationTests
         var oneHourFromNow = now.AddHours(1);
 
         var auth = AuthorizationBuilder.Create()
-            .AddRole("role:temp-admin", r => r.Grant("system.*"))
+            .AddRole("role:temp-admin", r => r.Grant("system:*"))
             .Assign("user:contractor", "role:temp-admin", oneHourAgo, oneHourFromNow)
             .Build();
 
         // Access is currently valid
         var decision = await auth.Engine
             .For("user:contractor")
-            .On("system.admin")
+            .On("system:admin")
             .EvaluateAsync();
         Assert.True(decision.IsAllowed);
         _output.WriteLine("Temporary access is currently valid");
@@ -177,7 +177,7 @@ public class IntegrationTests
         var auth = AuthorizationBuilder.Create()
             .AddRole("role:project-lead", r =>
             {
-                r.Grant("project.task.*", new ScopeBag
+                r.Grant("project:task:*", new ScopeBag
                 {
                     ["tenant"] = "acme",
                     ["project"] = "alpha"
@@ -185,12 +185,12 @@ public class IntegrationTests
             })
             .AddRole("role:developer", r =>
             {
-                r.Grant("project.task.read", new ScopeBag
+                r.Grant("project:task:read", new ScopeBag
                 {
                     ["tenant"] = "acme",
                     ["project"] = "alpha"
                 });
-                r.Grant("project.task.update", new ScopeBag
+                r.Grant("project:task:update", new ScopeBag
                 {
                     ["tenant"] = "acme",
                     ["project"] = "alpha"
@@ -203,7 +203,7 @@ public class IntegrationTests
         // Project lead has all task permissions via wildcard
         var decision1 = await auth.Engine
             .For("user:lead")
-            .On("project.task.delete")
+            .On("project:task:delete")
             .InScope(new ScopeBag
             {
                 ["tenant"] = "acme",
@@ -216,7 +216,7 @@ public class IntegrationTests
         // Developer cannot delete
         var decision2 = await auth.Engine
             .For("user:dev")
-            .On("project.task.delete")
+            .On("project:task:delete")
             .InScope(new ScopeBag
             {
                 ["tenant"] = "acme",
@@ -229,7 +229,7 @@ public class IntegrationTests
         // Developer can read
         var decision3 = await auth.Engine
             .For("user:dev")
-            .On("project.task.read")
+            .On("project:task:read")
             .InScope(new ScopeBag
             {
                 ["tenant"] = "acme",
@@ -242,7 +242,7 @@ public class IntegrationTests
         // More specific scope still works
         var decision4 = await auth.Engine
             .For("user:lead")
-            .On("project.task.read")
+            .On("project:task:read")
             .InScope(new ScopeBag
             {
                 ["tenant"] = "acme",
@@ -262,7 +262,7 @@ public class IntegrationTests
         // Add roles at runtime
         var adminRole = new Role("role:admin", "Administrator", new List<PermissionGrant>
         {
-            new PermissionGrant("system.*")
+            new PermissionGrant("system:*")
         });
         host.AddRole(adminRole);
         _output.WriteLine("Added admin role at runtime");
@@ -274,7 +274,7 @@ public class IntegrationTests
         // Verify access
         var decision1 = await host.Engine
             .For("user:newadmin")
-            .On("system.config")
+            .On("system:config")
             .EvaluateAsync();
         Assert.True(decision1.IsAllowed);
         _output.WriteLine("New admin has system access");
@@ -286,7 +286,7 @@ public class IntegrationTests
         // Verify revocation
         var decision2 = await host.Engine
             .For("user:newadmin")
-            .On("system.config")
+            .On("system:config")
             .EvaluateAsync();
         Assert.False(decision2.IsAllowed);
         _output.WriteLine("Admin access successfully revoked");
